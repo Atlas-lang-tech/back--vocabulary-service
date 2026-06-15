@@ -1,0 +1,22 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Add domain models below. Convention: camelCase singular model name,
+// @@map to a snake_case plural SQL table. Example:
+//
+// model word {
+//   id        Int      @id @default(autoincrement())
+//   text      String   @unique
+//   createdAt DateTime @default(now())
+//
+//   @@map("words")
+// }

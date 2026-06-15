@@ -1,0 +1,14 @@
+node_modules
+dist
+generated
+coverage
+.git
+.github
+.vscode
+.idea
+*.log
+.env
+.env.*
+Dockerfile
+dockerfile
+docker-compose.yml
