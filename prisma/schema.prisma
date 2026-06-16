@@ -10,13 +10,11 @@ datasource db {
   provider = "postgresql"
 }
 
-// Add domain models below. Convention: camelCase singular model name,
-// @@map to a snake_case plural SQL table. Example:
-//
-// model word {
-//   id        Int      @id @default(autoincrement())
-//   text      String   @unique
-//   createdAt DateTime @default(now())
-//
-//   @@map("words")
-// }
+model dictionary {
+  id     Int    @id @default(autoincrement())
+  userId String @map("user_id")
+  title  String
+  icon   String
+
+  @@map("dictionaries")
+}

@@ -12,51 +12,57 @@ import { jest } from '@jest/globals';
  * `createMockPrisma()` (and to the `MockPrisma` interface) so specs can stub it.
  */
 
+// Permissive signature so `mockResolvedValue`/`mockReturnValue` accept any
+// stubbed entity without casts (the default `jest.Mock` returns a non-Promise
+// `unknown`, which makes `mockResolvedValue` expect `never`).
+type AnyAsyncFn = (...args: any[]) => any;
+type ModelMethod = jest.Mock<AnyAsyncFn>;
+
 export type Model = {
-  findUnique: jest.Mock;
-  findFirst: jest.Mock;
-  findMany: jest.Mock;
-  create: jest.Mock;
-  update: jest.Mock;
-  delete: jest.Mock;
-  deleteMany: jest.Mock;
+  findUnique: ModelMethod;
+  findFirst: ModelMethod;
+  findMany: ModelMethod;
+  create: ModelMethod;
+  update: ModelMethod;
+  delete: ModelMethod;
+  deleteMany: ModelMethod;
 };
 
 export function createModelMock(): Model {
   return {
-    findUnique: jest.fn(),
-    findFirst: jest.fn(),
-    findMany: jest.fn(),
-    create: jest.fn(),
-    update: jest.fn(),
-    delete: jest.fn(),
-    deleteMany: jest.fn(),
+    findUnique: jest.fn<AnyAsyncFn>(),
+    findFirst: jest.fn<AnyAsyncFn>(),
+    findMany: jest.fn<AnyAsyncFn>(),
+    create: jest.fn<AnyAsyncFn>(),
+    update: jest.fn<AnyAsyncFn>(),
+    delete: jest.fn<AnyAsyncFn>(),
+    deleteMany: jest.fn<AnyAsyncFn>(),
   };
 }
 
 export interface MockPrisma {
-  // Add per-model mocks here as the schema grows, e.g. `word: Model;`.
+  dictionary: Model;
   $transaction: jest.Mock;
 }
 
 export function createMockPrisma(): MockPrisma {
   const prisma = {
-    // Add per-model mocks here, e.g. `word: createModelMock(),`.
+    dictionary: createModelMock(),
 
     // By default run the interactive-transaction callback against the same
     // mock client, so two-pass reorder/sync logic executes inline.
     $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(prisma)),
   };
-  return prisma as MockPrisma;
+  return prisma;
 }
 
 export interface MockRedis {
-  get: jest.Mock;
-  set: jest.Mock;
-  del: jest.Mock;
-  exists: jest.Mock;
-  expire: jest.Mock;
-  keys: jest.Mock;
+  get: jest.Mock<AnyAsyncFn>;
+  set: jest.Mock<AnyAsyncFn>;
+  del: jest.Mock<AnyAsyncFn>;
+  exists: jest.Mock<AnyAsyncFn>;
+  expire: jest.Mock<AnyAsyncFn>;
+  keys: jest.Mock<AnyAsyncFn>;
 }
 
 export function createMockRedis(): MockRedis {
