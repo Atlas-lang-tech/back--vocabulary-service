@@ -16,5 +16,22 @@ model dictionary {
   title  String
   icon   String
 
+  words word[]
+
   @@map("dictionaries")
+}
+
+model word {
+  id            Int       @id @default(autoincrement())
+  dictionaryId  Int       @map("dictionary_id")
+  word          String
+  translation   String
+  transcription String?
+  example       String?
+  description   String?
+  lastStudiedAt DateTime? @map("last_studied_at")
+
+  dictionary dictionary @relation(fields: [dictionaryId], references: [id], onDelete: Cascade)
+
+  @@map("words")
 }
