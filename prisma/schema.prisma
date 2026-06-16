@@ -16,7 +16,8 @@ model dictionary {
   title  String
   icon   String
 
-  words word[]
+  words    word[]
+  sessions studySession[]
 
   @@map("dictionaries")
 }
@@ -29,9 +30,31 @@ model word {
   transcription String?
   example       String?
   description   String?
+  // Spaced-repetition state. `points` is the source of truth; `level` is
+  // derived from it (NEW 0-49 / LEARNING 50-99 / MASTERED 100+).
+  points        Int       @default(0)
+  level         String    @default("NEW")
   lastStudiedAt DateTime? @map("last_studied_at")
+  nextReviewAt  DateTime? @map("next_review_at")
 
-  dictionary dictionary @relation(fields: [dictionaryId], references: [id], onDelete: Cascade)
+  dictionary dictionary     @relation(fields: [dictionaryId], references: [id], onDelete: Cascade)
+  sessions   studySession[]
 
   @@map("words")
+}
+
+// One fixed daily study pool (<=25 words) per dictionary per day. Assembled on
+// first request for the day and reused all day so the user can grind the same
+// words across the different mini-games.
+model studySession {
+  id           Int      @id @default(autoincrement())
+  dictionaryId Int      @map("dictionary_id")
+  date         DateTime @db.Date
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  dictionary dictionary @relation(fields: [dictionaryId], references: [id], onDelete: Cascade)
+  words      word[]
+
+  @@unique([dictionaryId, date])
+  @@map("study_sessions")
 }

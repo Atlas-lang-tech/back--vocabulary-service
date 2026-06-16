@@ -43,6 +43,7 @@ export function createModelMock(): Model {
 export interface MockPrisma {
   dictionary: Model;
   word: Model;
+  studySession: Model;
   $transaction: jest.Mock;
 }
 
@@ -50,6 +51,7 @@ export function createMockPrisma(): MockPrisma {
   const prisma = {
     dictionary: createModelMock(),
     word: createModelMock(),
+    studySession: createModelMock(),
 
     // By default run the interactive-transaction callback against the same
     // mock client, so two-pass reorder/sync logic executes inline.
