@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from '@jest/globals';
+import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import {
   createMockPrisma,
@@ -6,21 +6,34 @@ import {
   type MockPrisma,
   type MockRedis,
 } from '../common/testing/mocks.js';
+import type { UserContext } from '../common/auth/current-user.decorator.js';
 import { DictionaryService } from './dictionary.service.js';
 
 describe('DictionaryService', () => {
   let prisma: MockPrisma;
   let redis: MockRedis;
+  let planLimits: { getLimit: jest.Mock; upsert: jest.Mock };
   let service: DictionaryService;
 
   const owner = '11111111-1111-1111-1111-111111111111';
   const stranger = '22222222-2222-2222-2222-222222222222';
   const dict = { id: 1, userId: owner, title: 'Verbs', icon: 'book' };
+  const user: UserContext = { userId: owner, role: 'USER', plan: 'FREE' };
 
   beforeEach(() => {
     prisma = createMockPrisma();
     redis = createMockRedis();
-    service = new DictionaryService(prisma as any, redis as any);
+    planLimits = {
+      getLimit: jest
+        .fn<any>()
+        .mockResolvedValue({ maxDictionaries: 2, maxWordsPerDict: 100 }),
+      upsert: jest.fn<any>(),
+    };
+    service = new DictionaryService(
+      prisma as any,
+      redis as any,
+      planLimits as any,
+    );
   });
 
   describe('findAll', () => {
@@ -77,31 +90,41 @@ describe('DictionaryService', () => {
   });
 
   describe('create', () => {
-    it('creates and invalidates affected cache keys', async () => {
+    it('creates with the header userId when under the plan limit', async () => {
+      prisma.dictionary.count.mockResolvedValue(1);
       prisma.dictionary.create.mockResolvedValue(dict);
 
-      const result = await service.create({
-        userId: owner,
-        title: 'Verbs',
-        icon: 'book',
-      });
+      const result = await service.create({ title: 'Verbs', icon: 'book' }, user);
 
       expect(result).toEqual(dict);
+      expect(planLimits.getLimit).toHaveBeenCalledWith('FREE');
+      expect(prisma.dictionary.count).toHaveBeenCalledWith({
+        where: { userId: owner },
+      });
+      expect(prisma.dictionary.create).toHaveBeenCalledWith({
+        data: { userId: owner, title: 'Verbs', icon: 'book' },
+      });
       expect(redis.del).toHaveBeenCalledWith('dictionary:all');
       expect(redis.del).toHaveBeenCalledWith('dictionary:1');
       expect(redis.del).toHaveBeenCalledWith('dictionary:user:' + owner);
+    });
+
+    it('throws ForbiddenException (LIMIT_DICTIONARIES) when the limit is reached', async () => {
+      prisma.dictionary.count.mockResolvedValue(2);
+
+      await expect(
+        service.create({ title: 'Verbs', icon: 'book' }, user),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(prisma.dictionary.create).not.toHaveBeenCalled();
     });
   });
 
   describe('update', () => {
     it('updates when the requester owns the dictionary', async () => {
       prisma.dictionary.findUnique.mockResolvedValue(dict);
-      prisma.dictionary.update.mockResolvedValue({
-        ...dict,
-        title: 'Nouns',
-      });
+      prisma.dictionary.update.mockResolvedValue({ ...dict, title: 'Nouns' });
 
-      const result = await service.update(1, { userId: owner, title: 'Nouns' });
+      const result = await service.update(1, { title: 'Nouns' }, owner);
 
       expect(result.title).toBe('Nouns');
       expect(prisma.dictionary.update).toHaveBeenCalledWith({
@@ -114,7 +137,7 @@ describe('DictionaryService', () => {
       prisma.dictionary.findUnique.mockResolvedValue(dict);
 
       await expect(
-        service.update(1, { userId: stranger, title: 'Nouns' }),
+        service.update(1, { title: 'Nouns' }, stranger),
       ).rejects.toBeInstanceOf(ForbiddenException);
       expect(prisma.dictionary.update).not.toHaveBeenCalled();
     });

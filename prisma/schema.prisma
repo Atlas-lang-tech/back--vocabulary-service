@@ -10,6 +10,17 @@ datasource db {
   provider = "postgresql"
 }
 
+// Local read-model of per-plan limits, populated from billing's `plan.upserted`
+// RabbitMQ events. Keyed by plan code (e.g. "FREE"); the X-User-Plan header
+// selects the row. A hardcoded fallback (FREE 2/100) covers a missing row.
+model planLimit {
+  code            String @id
+  maxDictionaries Int    @map("max_dictionaries")
+  maxWordsPerDict Int    @map("max_words_per_dict")
+
+  @@map("plan_limits")
+}
+
 model dictionary {
   id     Int    @id @default(autoincrement())
   userId String @map("user_id")

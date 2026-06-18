@@ -1,9 +1,6 @@
-import { IsNotEmpty, IsString, IsUUID } from 'class-validator';
+import { IsNotEmpty, IsString } from 'class-validator';
 
 export class CreateDictionaryDto {
-  @IsUUID()
-  userId!: string;
-
   @IsString()
   @IsNotEmpty()
   title!: string;

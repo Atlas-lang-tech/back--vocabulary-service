@@ -1,5 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import type { word } from '../../generated/prisma/client.js';
+import type { UserContext } from '../common/auth/current-user.decorator.js';
+import { PlanLimitService } from '../plan-limit/plan-limit.service.js';
 import { PrismaService } from '../modules/Prisma/prisma.service.js';
 import { RedisService } from '../modules/redis/redis.service.js';
 import { CreateWordDto } from './dto/create-word.dto.js';
@@ -13,6 +19,7 @@ export class WordService {
   constructor(
     private db: PrismaService,
     private cache: RedisService,
+    private planLimits: PlanLimitService,
   ) {}
 
   async findAll(): Promise<word[]> {
@@ -52,7 +59,7 @@ export class WordService {
     return data;
   }
 
-  async create(dto: CreateWordDto): Promise<word> {
+  async create(dto: CreateWordDto, user: UserContext): Promise<word> {
     const dictionary = await this.db.dictionary.findUnique({
       where: { id: dto.dictionaryId },
     });
@@ -60,6 +67,20 @@ export class WordService {
       throw new NotFoundException(
         `Dictionary with id ${dto.dictionaryId} not found`,
       );
+    }
+    if (dictionary.userId !== user.userId) {
+      throw new ForbiddenException('You are not the owner of this dictionary');
+    }
+
+    const limit = await this.planLimits.getLimit(user.plan);
+    const count = await this.db.word.count({
+      where: { dictionaryId: dto.dictionaryId },
+    });
+    if (count >= limit.maxWordsPerDict) {
+      throw new ForbiddenException({
+        code: 'LIMIT_WORDS',
+        message: `Word limit reached for plan ${user.plan} (max ${limit.maxWordsPerDict} per dictionary)`,
+      });
     }
 
     const item = await this.db.word.create({ data: dto });

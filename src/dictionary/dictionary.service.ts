@@ -4,6 +4,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { dictionary } from '../../generated/prisma/client.js';
+import type { UserContext } from '../common/auth/current-user.decorator.js';
+import { PlanLimitService } from '../plan-limit/plan-limit.service.js';
 import { PrismaService } from '../modules/Prisma/prisma.service.js';
 import { RedisService } from '../modules/redis/redis.service.js';
 import { CreateDictionaryDto } from './dto/create-dictionary.dto.js';
@@ -17,6 +19,7 @@ export class DictionaryService {
   constructor(
     private db: PrismaService,
     private cache: RedisService,
+    private planLimits: PlanLimitService,
   ) {}
 
   async findAll(): Promise<dictionary[]> {
@@ -54,15 +57,35 @@ export class DictionaryService {
     return data;
   }
 
-  async create(dto: CreateDictionaryDto): Promise<dictionary> {
-    const dict = await this.db.dictionary.create({ data: dto });
+  async create(
+    dto: CreateDictionaryDto,
+    user: UserContext,
+  ): Promise<dictionary> {
+    const limit = await this.planLimits.getLimit(user.plan);
+    const count = await this.db.dictionary.count({
+      where: { userId: user.userId },
+    });
+    if (count >= limit.maxDictionaries) {
+      throw new ForbiddenException({
+        code: 'LIMIT_DICTIONARIES',
+        message: `Dictionary limit reached for plan ${user.plan} (max ${limit.maxDictionaries})`,
+      });
+    }
+
+    const dict = await this.db.dictionary.create({
+      data: { userId: user.userId, title: dto.title, icon: dto.icon },
+    });
     await this.invalidate(dict);
     return dict;
   }
 
-  async update(id: number, dto: UpdateDictionaryDto): Promise<dictionary> {
+  async update(
+    id: number,
+    dto: UpdateDictionaryDto,
+    userId: string,
+  ): Promise<dictionary> {
     const existing = await this.findOne(id);
-    this.assertOwner(existing, dto.userId);
+    this.assertOwner(existing, userId);
 
     const dict = await this.db.dictionary.update({
       where: { id },
@@ -81,8 +104,8 @@ export class DictionaryService {
     return { message: 'Dictionary deleted successfully' };
   }
 
-  // The service does not enforce auth (no guard on the platform yet); it only
-  // verifies that the requester's userId matches the dictionary owner.
+  // Verifies that the requester (X-User-Id, via UserContextGuard) owns the
+  // dictionary. The guard establishes identity; this enforces ownership.
   private assertOwner(dict: dictionary, userId: string): void {
     if (dict.userId !== userId) {
       throw new ForbiddenException('You are not the owner of this dictionary');

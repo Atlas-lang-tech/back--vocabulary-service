@@ -27,6 +27,9 @@ class EnvironmentVariables {
   @IsNumber()
   @Min(0)
   REDIS_DB: number;
+
+  @IsString()
+  RABBITMQ_URL: string;
 }
 
 export function validate(config: Record<string, unknown>) {

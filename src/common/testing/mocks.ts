@@ -24,8 +24,10 @@ export type Model = {
   findMany: ModelMethod;
   create: ModelMethod;
   update: ModelMethod;
+  upsert: ModelMethod;
   delete: ModelMethod;
   deleteMany: ModelMethod;
+  count: ModelMethod;
 };
 
 export function createModelMock(): Model {
@@ -35,8 +37,10 @@ export function createModelMock(): Model {
     findMany: jest.fn<AnyAsyncFn>(),
     create: jest.fn<AnyAsyncFn>(),
     update: jest.fn<AnyAsyncFn>(),
+    upsert: jest.fn<AnyAsyncFn>(),
     delete: jest.fn<AnyAsyncFn>(),
     deleteMany: jest.fn<AnyAsyncFn>(),
+    count: jest.fn<AnyAsyncFn>(),
   };
 }
 
@@ -44,6 +48,7 @@ export interface MockPrisma {
   dictionary: Model;
   word: Model;
   studySession: Model;
+  planLimit: Model;
   $transaction: jest.Mock;
 }
 
@@ -52,6 +57,7 @@ export function createMockPrisma(): MockPrisma {
     dictionary: createModelMock(),
     word: createModelMock(),
     studySession: createModelMock(),
+    planLimit: createModelMock(),
 
     // By default run the interactive-transaction callback against the same
     // mock client, so two-pass reorder/sync logic executes inline.
