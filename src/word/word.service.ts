@@ -68,7 +68,7 @@ export class WordService {
         `Dictionary with id ${dto.dictionaryId} not found`,
       );
     }
-    if (dictionary.userId !== user.userId) {
+    if (dictionary.userId !== user.id) {
       throw new ForbiddenException('You are not the owner of this dictionary');
     }
 

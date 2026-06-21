@@ -33,7 +33,7 @@ describe('WordService', () => {
     description: null,
     lastStudiedAt: null,
   };
-  const user: UserContext = { userId: owner, role: 'USER', plan: 'FREE' };
+  const user: UserContext = { id: owner, role: 'USER', plan: 'FREE' };
 
   beforeEach(() => {
     prisma = createMockPrisma();
@@ -105,7 +105,10 @@ describe('WordService', () => {
       prisma.dictionary.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.create({ dictionaryId, word: 'run', translation: 'бігти' }, user),
+        service.create(
+          { dictionaryId, word: 'run', translation: 'бігти' },
+          user,
+        ),
       ).rejects.toBeInstanceOf(NotFoundException);
       expect(prisma.word.create).not.toHaveBeenCalled();
     });
@@ -117,7 +120,10 @@ describe('WordService', () => {
       });
 
       await expect(
-        service.create({ dictionaryId, word: 'run', translation: 'бігти' }, user),
+        service.create(
+          { dictionaryId, word: 'run', translation: 'бігти' },
+          user,
+        ),
       ).rejects.toBeInstanceOf(ForbiddenException);
       expect(prisma.word.create).not.toHaveBeenCalled();
     });
@@ -127,7 +133,10 @@ describe('WordService', () => {
       prisma.word.count.mockResolvedValue(100);
 
       await expect(
-        service.create({ dictionaryId, word: 'run', translation: 'бігти' }, user),
+        service.create(
+          { dictionaryId, word: 'run', translation: 'бігти' },
+          user,
+        ),
       ).rejects.toBeInstanceOf(ForbiddenException);
       expect(prisma.word.create).not.toHaveBeenCalled();
     });

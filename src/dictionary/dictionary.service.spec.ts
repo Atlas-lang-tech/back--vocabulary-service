@@ -18,7 +18,7 @@ describe('DictionaryService', () => {
   const owner = '11111111-1111-1111-1111-111111111111';
   const stranger = '22222222-2222-2222-2222-222222222222';
   const dict = { id: 1, userId: owner, title: 'Verbs', icon: 'book' };
-  const user: UserContext = { userId: owner, role: 'USER', plan: 'FREE' };
+  const user: UserContext = { id: owner, role: 'USER', plan: 'FREE' };
 
   beforeEach(() => {
     prisma = createMockPrisma();
@@ -94,7 +94,10 @@ describe('DictionaryService', () => {
       prisma.dictionary.count.mockResolvedValue(1);
       prisma.dictionary.create.mockResolvedValue(dict);
 
-      const result = await service.create({ title: 'Verbs', icon: 'book' }, user);
+      const result = await service.create(
+        { title: 'Verbs', icon: 'book' },
+        user,
+      );
 
       expect(result).toEqual(dict);
       expect(planLimits.getLimit).toHaveBeenCalledWith('FREE');

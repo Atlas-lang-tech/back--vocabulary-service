@@ -3,12 +3,12 @@ import {
   IsNumber,
   IsOptional,
   IsString,
-  validateSync,
-  Min,
   Max,
+  Min,
+  validateSync,
 } from 'class-validator';
 
-class EnvironmentVariables {
+export class EnvironmentVariables {
   @IsString()
   DATABASE_URL: string;
 
@@ -20,28 +20,32 @@ class EnvironmentVariables {
   @Max(65535)
   REDIS_PORT: number;
 
-  @IsString()
-  @IsOptional()
-  REDIS_PASSWORD?: string;
-
   @IsNumber()
   @Min(0)
   REDIS_DB: number;
+
+  @IsOptional()
+  @IsString()
+  REDIS_PASSWORD?: string;
 
   @IsString()
   RABBITMQ_URL: string;
 }
 
-export function validate(config: Record<string, unknown>) {
-  const validatedConfig = plainToInstance(EnvironmentVariables, config, {
+export function validate(
+  config: Record<string, unknown>,
+): EnvironmentVariables {
+  const validated = plainToInstance(EnvironmentVariables, config, {
     enableImplicitConversion: true,
   });
-  const errors = validateSync(validatedConfig, {
+
+  const errors = validateSync(validated, {
     skipMissingProperties: false,
   });
 
   if (errors.length > 0) {
     throw new Error(errors.toString());
   }
-  return validatedConfig;
+
+  return validated;
 }

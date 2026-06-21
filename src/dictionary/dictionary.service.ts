@@ -63,7 +63,7 @@ export class DictionaryService {
   ): Promise<dictionary> {
     const limit = await this.planLimits.getLimit(user.plan);
     const count = await this.db.dictionary.count({
-      where: { userId: user.userId },
+      where: { userId: user.id },
     });
     if (count >= limit.maxDictionaries) {
       throw new ForbiddenException({
@@ -73,7 +73,7 @@ export class DictionaryService {
     }
 
     const dict = await this.db.dictionary.create({
-      data: { userId: user.userId, title: dto.title, icon: dto.icon },
+      data: { userId: user.id, title: dto.title, icon: dto.icon },
     });
     await this.invalidate(dict);
     return dict;

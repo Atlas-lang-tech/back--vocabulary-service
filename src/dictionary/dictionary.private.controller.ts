@@ -39,7 +39,7 @@ export class DictionaryPrivateController {
     @CurrentUser() user: UserContext,
     @Body() dto: UpdateDictionaryDto,
   ) {
-    return this.service.update(id, dto, user.userId);
+    return this.service.update(id, dto, user.id);
   }
 
   @Delete(':id')
@@ -47,6 +47,6 @@ export class DictionaryPrivateController {
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser() user: UserContext,
   ) {
-    return this.service.remove(id, user.userId);
+    return this.service.remove(id, user.id);
   }
 }

@@ -4,35 +4,48 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import type { UserContext } from './current-user.decorator.js';
+import { Request } from 'express';
 
 /**
- * Reads the identity headers injected by the gateway (Traefik ForwardAuth) and
- * attaches a {@link UserContext} to the request. There is no token validation
- * here — trust is established upstream; this guard only requires that the
- * gateway forwarded an `X-User-Id`. Role/plan fall back to sane defaults.
+ * Identity derived from the headers Traefik's ForwardAuth injects after a
+ * successful `/verify`. This service never authenticates — it only reads what
+ * the gateway already validated.
+ */
+export interface UserContext {
+  id: string;
+  role: string;
+  plan: string;
+}
+
+declare module 'express' {
+  interface Request {
+    user?: UserContext;
+  }
+}
+
+/**
+ * Reads identity from headers set by Traefik ForwardAuth (`X-User-Id`,
+ * `X-User-Role`, `X-User-Plan`) and attaches `request.user`. Applied to private
+ * routes only — the gateway guarantees the header is present after auth, so a
+ * missing `X-User-Id` means the request bypassed the gateway → 401. Role/plan
+ * fall back to sane defaults.
  */
 @Injectable()
 export class UserContextGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
-    const req = context.switchToHttp().getRequest();
-    const headers = req.headers ?? {};
+    const request = context.switchToHttp().getRequest<Request>();
 
-    const userId = headers['x-user-id'];
-    if (!userId || typeof userId !== 'string') {
-      throw new UnauthorizedException('Missing X-User-Id header');
+    const id = request.header('x-user-id');
+    if (!id) {
+      throw new UnauthorizedException('Missing user context');
     }
 
-    const role =
-      typeof headers['x-user-role'] === 'string'
-        ? headers['x-user-role']
-        : 'USER';
-    const plan =
-      typeof headers['x-user-plan'] === 'string'
-        ? headers['x-user-plan']
-        : 'FREE';
+    request.user = {
+      id,
+      role: request.header('x-user-role') ?? 'USER',
+      plan: request.header('x-user-plan') ?? 'FREE',
+    };
 
-    req.user = { userId, role, plan } satisfies UserContext;
     return true;
   }
 }

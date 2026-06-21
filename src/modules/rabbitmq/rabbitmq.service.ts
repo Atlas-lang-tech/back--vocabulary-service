@@ -68,9 +68,7 @@ export class RabbitmqService implements OnModuleInit, OnModuleDestroy {
         return;
       }
 
-      const payload = JSON.parse(
-        msg.content.toString(),
-      ) as PlanUpsertedPayload;
+      const payload = JSON.parse(msg.content.toString()) as PlanUpsertedPayload;
       await this.planLimits.upsert({
         code: payload.code,
         maxDictionaries: payload.maxDictionaries,
